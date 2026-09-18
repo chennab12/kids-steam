@@ -1,30 +1,38 @@
-# STEAM Mesh V2
+# STEAM Mesh V3
 
-LearnMesh-inspired Streamlit family learning app for Science, Technology, Engineering, Arts and Math.
+High-ROI V3 upgrade of the Streamlit kids STEAM learning app.
 
-## Main functionality
-- 500 grade-tagged questions
+## V3 additions
+- true daily learning streaks
+- richer badges including 7-Day Streak, Racer, Comeback Kid
+- skill/subskill prerequisite map
+- spaced repetition review queue
+- Puzzle Racer against the child's own personal best
+- weekly parent analytics with week-over-week comparison
+- hands-on STEAM project missions
+- existing 500 grade-tagged questions enriched with:
+  - domain
+  - subskill
+  - prerequisite
+  - standards family
+  - estimated time
+
+## Preserved V2 features
+- child profiles
 - Grades 2–7
-- Five STEAM subjects
-- Core 1 / Core 2 / Core 3 difficulty
-- Family profile picker
-- SQLite persistence
-- XP, stars, streaks and levels
-- Per-subject / per-skill mastery
-- Weak-area recommendation
-- Practice mode
-- Timed tests
-- Review missed questions
-- Hints and explanations
-- Badges
-- Parent PIN
-- Session limits and break reminders
-- Custom reward catalog and redemption
+- Science, Technology, Engineering, Arts, Math
+- XP and stars
+- mastery
+- practice
+- timed tests
+- hints and explanations
+- rewards + parent approval
+- parent PIN
+- session limits and break reminders
+- family feed
 
 ## First-run parent PIN
 `2468`
-
-Change it in Parent Center immediately.
 
 ## Run
 ```powershell
@@ -33,28 +41,8 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
-## Streamlit Cloud persistence
-SQLite is good for local use and a live instance but is not ideal as durable cloud storage across redeploys. For production, replace `db.py` with Supabase/Postgres while keeping the same function interface.
+## Deploy
+Push the project to GitHub and deploy `app.py` with Streamlit Community Cloud.
 
-## Recommended V3
-- Supabase family auth and durable cloud persistence
-- Puzzle Racer / personal best mode
-- standards tagging (NGSS / Common Core / CSTA)
-- spaced repetition scheduler
-- parent approval queue for rewards
-- weekly progress report
-- validated AI follow-up questions
-- hands-on STEAM build missions
-
-
-## Streamlit ImportError fix
-
-This build intentionally uses unique module names:
-
-- `steam_quiz_agent.py`
-- `steam_quiz_db.py`
-- `steam_question_bank.py`
-
-This avoids collisions with generic Python/module names such as `agent` or stale files in an existing GitHub repo.
-
-When updating an older repo, **delete the old `agent.py`, `db.py`, and `question_bank.py` files** before redeploying.
+## Production persistence note
+SQLite is intentionally retained so V3 works immediately. For durable cloud persistence across redeploys, replace `steam_quiz_db.py` with a Supabase/Postgres implementation that preserves the same function interface.

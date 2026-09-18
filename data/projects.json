@@ -1,0 +1,142 @@
+[
+  {
+    "id": "p001",
+    "subject": "Engineering",
+    "grade_min": 3,
+    "grade_max": 6,
+    "title": "Paper Bridge Challenge",
+    "goal": "Build a paper bridge spanning 20 cm that holds as many coins as possible.",
+    "materials": [
+      "2 sheets of paper",
+      "2 books",
+      "coins",
+      "ruler"
+    ],
+    "steps": [
+      "Predict which fold will be strongest.",
+      "Build version 1.",
+      "Test with coins.",
+      "Record the maximum load.",
+      "Change one design feature and retest."
+    ],
+    "measure": "Maximum coins supported",
+    "reflection": "What design change improved strength, and why?",
+    "xp": 50
+  },
+  {
+    "id": "p002",
+    "subject": "Science",
+    "grade_min": 3,
+    "grade_max": 6,
+    "title": "Best Insulator Test",
+    "goal": "Compare materials to see which slows cooling best.",
+    "materials": [
+      "3 cups",
+      "warm water",
+      "cloth",
+      "paper",
+      "foil",
+      "thermometer if available"
+    ],
+    "steps": [
+      "Wrap each cup with a different material.",
+      "Add equal warm water.",
+      "Record starting temperature.",
+      "Wait 15 minutes.",
+      "Compare temperature drop."
+    ],
+    "measure": "Temperature change after 15 minutes",
+    "reflection": "Which material reduced heat loss most?",
+    "xp": 50
+  },
+  {
+    "id": "p003",
+    "subject": "Technology",
+    "grade_min": 4,
+    "grade_max": 7,
+    "title": "Algorithm Treasure Hunt",
+    "goal": "Write an exact step-by-step algorithm that another person can follow.",
+    "materials": [
+      "paper",
+      "pencil",
+      "small object"
+    ],
+    "steps": [
+      "Hide an object.",
+      "Write precise directions.",
+      "Have someone follow only the written steps.",
+      "Mark where the algorithm failed.",
+      "Rewrite and retry."
+    ],
+    "measure": "Number of revisions needed",
+    "reflection": "Which instruction was ambiguous?",
+    "xp": 40
+  },
+  {
+    "id": "p004",
+    "subject": "Arts",
+    "grade_min": 3,
+    "grade_max": 7,
+    "title": "Visual Hierarchy Poster",
+    "goal": "Design a one-page poster using size, contrast, and spacing to guide the viewer's eye.",
+    "materials": [
+      "paper or drawing app",
+      "markers or colored pencils"
+    ],
+    "steps": [
+      "Choose a title, subtitle, and three facts.",
+      "Make one element dominant.",
+      "Use contrast deliberately.",
+      "Add negative space.",
+      "Ask someone what they noticed first."
+    ],
+    "measure": "Viewer correctly identifies intended visual order",
+    "reflection": "Which design choice created the strongest emphasis?",
+    "xp": 40
+  },
+  {
+    "id": "p005",
+    "subject": "Math",
+    "grade_min": 3,
+    "grade_max": 6,
+    "title": "Measure Your Room",
+    "goal": "Estimate and then calculate room perimeter and area.",
+    "materials": [
+      "tape measure",
+      "paper",
+      "pencil"
+    ],
+    "steps": [
+      "Estimate length and width.",
+      "Measure both dimensions.",
+      "Calculate perimeter.",
+      "Calculate area.",
+      "Compare estimate with measurement."
+    ],
+    "measure": "Difference between estimated and measured area",
+    "reflection": "Why was your estimate high or low?",
+    "xp": 40
+  },
+  {
+    "id": "p006",
+    "subject": "Technology",
+    "grade_min": 4,
+    "grade_max": 7,
+    "title": "micro:bit Reaction Timer",
+    "goal": "Create or plan a reaction-time game using input, output, variables, and timing.",
+    "materials": [
+      "micro:bit optional",
+      "MakeCode or paper pseudocode"
+    ],
+    "steps": [
+      "Define start signal.",
+      "Store the start time.",
+      "Wait for button input.",
+      "Compute elapsed time.",
+      "Display score and test multiple trials."
+    ],
+    "measure": "Best reaction time across trials",
+    "reflection": "Which part of the algorithm controls fairness?",
+    "xp": 60
+  }
+]
