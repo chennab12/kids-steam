@@ -1,42 +1,34 @@
 import random
-from questions import QUESTION_BANK
-
-LEVELS = ["Beginner", "Intermediate", "Advanced"]
-SUBJECTS = ["Science", "Technology", "Engineering", "Arts", "Math"]
-
-class STEAMQuizAgent:
-    def question_set(self, subject, difficulty, count=5, seed=None):
-        pool = list(QUESTION_BANK[subject][difficulty])
-        rng = random.Random(seed)
-        rng.shuffle(pool)
-        out = []
-        while len(out) < count:
-            cycle = list(pool)
-            rng.shuffle(cycle)
-            out.extend(cycle)
-        return out[:count]
-
-    def adaptive_level(self, current_level, recent_accuracy):
-        idx = LEVELS.index(current_level)
-        if recent_accuracy >= 0.85 and idx < len(LEVELS)-1:
-            return LEVELS[idx+1]
-        if recent_accuracy < 0.50 and idx > 0:
-            return LEVELS[idx-1]
-        return current_level
-
-    def xp_for_answer(self, correct, used_hint=False):
-        if not correct:
-            return 2
-        return 10 if used_hint else 13
-
-    def badge_for(self, total_correct, streak, perfect_rounds):
-        badges = []
-        if total_correct >= 1: badges.append("🌱 First Spark")
-        if total_correct >= 10: badges.append("🧠 Curious Mind")
-        if streak >= 5: badges.append("🔥 Hot Streak")
-        if perfect_rounds >= 1: badges.append("💯 Perfect Mission")
-        if total_correct >= 25: badges.append("🚀 STEAM Explorer")
-        return badges
-
-    def recommended_subject(self, mastery):
-        return min(SUBJECTS, key=lambda s: mastery.get(s, 0))
+from collections import defaultdict
+import db
+from question_bank import filter_questions
+SUBJECTS=["Science","Technology","Engineering","Arts","Math"]; CORES=["Core 1","Core 2","Core 3"]
+class Agent:
+    def weak_subject(self,pid):
+        m=db.mastery(pid); d=defaultdict(list)
+        for r in m:d[r["subject"]].append(r["score"])
+        return min(SUBJECTS,key=lambda s:sum(d[s])/len(d[s]) if d[s] else 0)
+    def pick(self,pid,subject,grade,core,count,review=False):
+        pool=filter_questions(subject,grade,core) or filter_questions(subject,grade)
+        if review:
+            ids=set(db.wrong_ids(pid)); miss=[q for q in pool if q["id"] in ids]
+            if miss: pool=miss
+        mm={(r["subject"],r["skill"]):r["score"] for r in db.mastery(pid)}
+        rnd=random.Random(pid*1000+len(db.attempts(pid)))
+        pool=sorted(pool,key=lambda q:(mm.get((q["subject"],q["skill"]),0),rnd.random()))
+        if len(pool)<count:
+            extra=filter_questions(subject,grade); rnd.shuffle(extra)
+            for q in extra:
+                if q not in pool: pool.append(q)
+                if len(pool)>=count: break
+        return pool[:count]
+    def next_core(self,core,acc):
+        i=CORES.index(core)
+        return CORES[min(2,i+1)] if acc>=.85 else CORES[max(0,i-1)] if acc<.5 else core
+    def badge_check(self,pid):
+        a=db.attempts(pid); p=db.get_profile(pid); correct=sum(x["correct"] for x in a)
+        if a: db.award_badge(pid,"🌱 First Steps")
+        if correct>=10: db.award_badge(pid,"🧠 Curious Mind")
+        if p["streak"]>=7: db.award_badge(pid,"🔥 Hot Streak")
+        if len(a)>=25: db.award_badge(pid,"🏆 25 Questions")
+        if p["xp"]>=500: db.award_badge(pid,"🦊 Explorer")

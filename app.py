@@ -1,178 +1,142 @@
-import time
-import streamlit as st
-from agent import STEAMQuizAgent, SUBJECTS, LEVELS
-
-st.set_page_config(page_title="STEAM Quest", page_icon="🚀", layout="wide", initial_sidebar_state="expanded")
-agent = STEAMQuizAgent()
-
-defaults = {
-    "xp":0, "stars":0, "streak":0, "correct":0, "answered":0,
-    "perfect_rounds":0, "mastery":{s:0 for s in SUBJECTS},
-    "mission":None
-}
-for k,v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k]=v
-
-icons={"Science":"🔬","Technology":"💻","Engineering":"🛠️","Arts":"🎨","Math":"➗"}
-
+import time,streamlit as st
+import db
+from agent import Agent,SUBJECTS,CORES
+from question_bank import skills_for
+st.set_page_config(page_title="STEAM Mesh",page_icon="🦊",layout="wide")
+db.init_db(); agent=Agent()
+for k,v in {"pid":None,"parent":False,"mission":None,"session_start":time.time()}.items():
+    if k not in st.session_state: st.session_state[k]=v
+profiles=db.profiles()
+if st.session_state.pid is None:
+    st.title("🦊 STEAM Mesh"); st.subheader("Who is learning today?")
+    cols=st.columns(min(4,len(profiles)+1))
+    for c,p in zip(cols,profiles):
+        with c:
+            st.markdown(f"## {p['avatar']}"); st.write(f"**{p['name']}** · Grade {p['grade']}"); st.caption(f"Lv {1+p['xp']//100} · {p['xp']} XP")
+            if st.button("Enter",key=f"p{p['id']}",use_container_width=True): st.session_state.pid=p["id"];st.session_state.session_start=time.time();st.rerun()
+    with cols[-1]:
+        st.markdown("## 🔒"); st.write("**Parent**")
+        if st.button("Parent sign in"):
+            st.session_state.parent_login=True
+    if st.session_state.get("parent_login"):
+        pin=st.text_input("PIN",type="password")
+        if st.button("Unlock"):
+            if db.verify_pin(pin): st.session_state.parent=True;st.session_state.pid=profiles[0]["id"];st.rerun()
+            else: st.error("Wrong PIN")
+    st.caption("First-run demo PIN: 2468. Change it in Parent Center.")
+    st.stop()
+pid=st.session_state.pid;p=db.get_profile(pid);agent.badge_check(pid);p=db.get_profile(pid)
+elapsed=(time.time()-st.session_state.session_start)/60
+if elapsed>=p["session_limit"]:
+    st.warning("⏰ Session limit reached.")
+    if st.button("Finish session"): st.session_state.pid=None;st.session_state.mission=None;st.rerun()
+    st.stop()
+elif elapsed>=p["break_reminder"]: st.info("💧 Break reminder: stretch, blink, and return refreshed.")
 with st.sidebar:
-    st.title("🚀 STEAM Quest")
-    st.caption("Kid-safe quiz adventure")
-    profile=st.text_input("Explorer name", "Young Explorer")
-    grade=st.selectbox("Grade band", ["Grades 2–3","Grades 4–5","Grades 6–7"], index=1)
-    session_limit=st.slider("Parent session limit",5,45,20,5)
-    timed=st.toggle("Timed mission",False)
-    st.divider()
-    st.metric("XP",st.session_state.xp)
-    st.metric("Stars",st.session_state.stars)
-    st.metric("Streak",st.session_state.streak)
-
-st.title(f"Welcome, {profile}! 🧪🤖🎨📐")
-st.write("Pick a STEAM world, complete missions, earn XP and stars, unlock badges, and level up.")
-
-level=1+st.session_state.xp//100
-character="🥚 Spark" if level<2 else "🐣 Builder" if level<4 else "🦊 Inventor" if level<7 else "🦸 STEAM Hero"
-accuracy=(st.session_state.correct/st.session_state.answered*100) if st.session_state.answered else 0
-
-a,b,c,d=st.columns(4)
-a.metric("Level",level); b.metric("Character",character); c.metric("Answered",st.session_state.answered); d.metric("Accuracy",f"{accuracy:.0f}%")
-
-st.header("🌎 Five STEAM Worlds")
-cols=st.columns(5)
-for col,subject in zip(cols,SUBJECTS):
-    with col:
-        st.subheader(f"{icons[subject]} {subject}")
-        st.progress(st.session_state.mastery[subject]/100)
-        st.caption(f"Mastery {st.session_state.mastery[subject]}%")
-
-st.divider()
-st.header("🎯 Start a Quiz Mission")
-c1,c2,c3=st.columns(3)
-with c1: subject=st.selectbox("Subject",SUBJECTS)
-with c2: difficulty=st.selectbox("Difficulty",LEVELS)
-with c3: count=st.selectbox("Questions",[3,5,10],index=1)
-
-rec=agent.recommended_subject(st.session_state.mastery)
-st.info(f"🤖 Agent recommendation: try **{rec}** next because it has your lowest mastery.")
-
-if st.button("🚀 Launch mission",use_container_width=True):
-    st.session_state.mission={
-        "subject":subject,
-        "difficulty":difficulty,
-        "questions":agent.question_set(subject,difficulty,count,seed=st.session_state.answered+11),
-        "index":0,
-        "round_correct":0,
-        "used_hint":set(),
-        "start_time":time.time(),
-        "complete":False,
-        "feedback":None
-    }
-    st.rerun()
-
-m=st.session_state.mission
-if m and not m["complete"]:
-    idx=m["index"]; q=m["questions"][idx]
-    st.divider()
-    st.subheader(f"{icons[m['subject']]} {m['subject']} · {m['difficulty']}")
-    st.caption(f"Question {idx+1} of {len(m['questions'])}")
-    if timed:
-        st.caption(f"⏱️ {int(time.time()-m['start_time'])} sec")
-
-    st.markdown(f"### {q['q']}")
-    choice=st.radio("Choose one:",q["options"],key=f"choice_{idx}_{m['subject']}")
-
-    if st.button("💡 Hint",key=f"hint_{idx}"):
-        m["used_hint"].add(idx)
-        st.session_state.mission=m
-    if idx in m["used_hint"]:
-        st.info(q["hint"])
-
-    if st.button("✅ Check answer",key=f"check_{idx}",use_container_width=True):
-        ok=choice==q["answer"]
-        st.session_state.answered+=1
-        xp=agent.xp_for_answer(ok,idx in m["used_hint"])
-        st.session_state.xp+=xp
-        if ok:
-            st.session_state.correct+=1
-            st.session_state.streak+=1
-            st.session_state.stars+=1
-            m["round_correct"]+=1
-            m["feedback"]=f"🎉 Correct! +{xp} XP · +1 ⭐\n\nWhy: {q['why']}"
-        else:
-            st.session_state.streak=0
-            m["feedback"]=f"Good try. Best answer: **{q['answer']}**\n\nWhy: {q['why']}"
-        st.session_state.mission=m
-
-    if m.get("feedback"):
-        st.success(m["feedback"]) if "Correct!" in m["feedback"] else st.warning(m["feedback"])
-        if st.button("Next question"):
-            if idx+1>=len(m["questions"]):
-                score=m["round_correct"]
-                pct=score/len(m["questions"])
-                if pct==1:
-                    st.session_state.perfect_rounds+=1
-                old=st.session_state.mastery[m["subject"]]
-                st.session_state.mastery[m["subject"]]=max(0,min(100,round(old*0.75+pct*100*0.25)))
-                m["suggested"]=agent.adaptive_level(m["difficulty"],pct)
-                m["complete"]=True
-            else:
-                m["index"]+=1
-                m["feedback"]=None
-            st.session_state.mission=m
-            st.rerun()
-
-if m and m.get("complete"):
-    st.divider()
-    st.header("🏁 Mission Complete")
-    score=m["round_correct"]; total=len(m["questions"])
-    x,y,z=st.columns(3)
-    x.metric("Score",f"{score}/{total}")
-    y.metric("Mastery",f"{st.session_state.mastery[m['subject']]}%")
-    z.metric("Next difficulty",m["suggested"])
-    st.write("Adaptive rule: **85%+ → level up · 50–84% → stay · below 50% → step down when possible**.")
-
-st.divider()
-st.header("🏅 Badges")
-badges=agent.badge_for(st.session_state.correct,st.session_state.streak,st.session_state.perfect_rounds)
-st.write(" · ".join(badges) if badges else "Complete your first correct answer to unlock a badge.")
-
-st.header("🎁 Parent Reward Catalog")
-r1,r2,r3=st.columns(3)
-r1.markdown("### 📚 Pick a new book\n120 ⭐")
-r2.markdown("### 🍕 Family pizza night\n150 ⭐")
-r3.markdown("### 🎮 Bonus game time\n80 ⭐")
-st.caption("Parents can replace these with family-approved rewards.")
-
-st.divider()
-st.header("🧠 Agent Loop")
-st.code("""
-Pick STEAM subject
-      ↓
-Pick difficulty
-      ↓
-Ask objective quiz question
-      ↓
-Optional hint
-      ↓
-Grade answer
-      ↓
-Explain WHY
-      ↓
-Award XP + stars + streak
-      ↓
-Update subject mastery
-      ↓
-Adapt difficulty
-      ↓
-Recommend weakest STEAM world
-      ↓
-Next mission
-""",language="text")
-
-st.header("👨‍👩‍👧 Parent View")
-cols=st.columns(5)
-for col,s in zip(cols,SUBJECTS):
-    col.metric(s,f"{st.session_state.mastery[s]}%")
-
-st.caption("Starter version stores progress in the Streamlit session only.")
+    st.title(f"{p['avatar']} {p['name']}");st.caption(f"Grade {p['grade']} · Level {1+p['xp']//100}")
+    st.metric("XP",p["xp"]);st.metric("Stars",p["stars"]);st.metric("Streak",p["streak"])
+    page=st.radio("Navigate",["Home","Practice","Timed Test","Review Missed","Family Feed","Rewards","Badges","Parent Center"])
+    if st.button("Switch profile"): st.session_state.pid=None;st.session_state.parent=False;st.session_state.mission=None;st.rerun()
+def sm(s):
+    r=[x["score"] for x in db.mastery(pid) if x["subject"]==s]; return round(sum(r)/len(r)) if r else 0
+if page=="Home":
+    st.title("One curious STEAM universe")
+    st.write("Profiles, mastery, timed missions, rewards, badges, streaks, and adaptive practice.")
+    a,b,c,d=st.columns(4);ats=db.attempts(pid);acc=100*sum(x["correct"] for x in ats)/len(ats) if ats else 0
+    level=1+p["xp"]//100
+    stage="🥚 Hatchling" if level<3 else "🐣 Sprout" if level<5 else "🦊 Explorer" if level<8 else "🦸 STEAM Hero"
+    a.metric("Character",stage);a.caption(f"Level {level}")
+    b.metric("Accuracy",f"{acc:.0f}%");c.metric("Questions",len(ats));d.metric("Stars",p["stars"])
+    icons={"Science":"🔬","Technology":"💻","Engineering":"🛠️","Arts":"🎨","Math":"➗"}
+    cols=st.columns(5)
+    for c,s in zip(cols,SUBJECTS):
+        with c: st.markdown(f"### {icons[s]} {s}");st.progress(sm(s)/100);st.caption(f"Mastery {sm(s)}%")
+    st.info(f"🤖 Recommended next world: **{agent.weak_subject(pid)}**")
+def mission(mode):
+    st.title(mode)
+    a,b,c,d=st.columns(4)
+    with a:s=st.selectbox("Subject",SUBJECTS)
+    with b:core=st.selectbox("Core",CORES,index=1)
+    with c:n=st.selectbox("Questions",[5,10,20],index=1)
+    with d:mins=st.selectbox("Minutes",[5,10,15,20],index=1) if mode=="Timed Test" else None
+    st.caption("Grade skills: "+", ".join(skills_for(s,p["grade"])[:10]))
+    if st.button("Launch",use_container_width=True):
+        st.session_state.mission={"mode":mode,"qs":agent.pick(pid,s,p["grade"],core,n,mode=="Review Missed"),"i":0,"correct":0,"core":core,"start":time.time(),"qstart":time.time(),"hint":False,"fb":None,"limit":mins*60 if mins else None};st.rerun()
+    m=st.session_state.mission
+    if not m or m["mode"]!=mode:return
+    if m.get("done"):
+        total=len(m["qs"]);acc=m["correct"]/total if total else 0
+        x,y,z=st.columns(3);x.metric("Score",f"{m['correct']}/{total}");y.metric("Accuracy",f"{acc*100:.0f}%");z.metric("Next core",agent.next_core(m["core"],acc))
+        if st.button("New mission"):st.session_state.mission=None;st.rerun()
+        return
+    if m["limit"] and time.time()-m["start"]>=m["limit"]:m["done"]=True;st.session_state.mission=m;st.rerun()
+    q=m["qs"][m["i"]];st.caption(f"{m['i']+1}/{len(m['qs'])} · Grade {q['grade']} · {q['skill']} · {q['difficulty']}")
+    if m["limit"]:
+        rem=max(0,int(m["limit"]-(time.time()-m["start"])));st.metric("Time left",f"{rem//60}:{rem%60:02d}")
+    st.markdown(f"## {q['prompt']}");choice=st.radio("Choose one",q["options"],key=q["id"]+str(m["i"]))
+    if st.button("💡 Hint"):m["hint"]=True;st.session_state.mission=m
+    if m["hint"]:st.info(q["hint"])
+    if not m["fb"] and st.button("Check answer",use_container_width=True):
+        ok=choice==q["answer"];xp,_=db.add_attempt(pid,q,ok,m["hint"],time.time()-m["qstart"]);db.set_streak(pid,p["streak"]+1 if ok else 0)
+        if ok:m["correct"]+=1
+        m["fb"]=(ok,xp);st.session_state.mission=m;st.rerun()
+    if m["fb"]:
+        ok,xp=m["fb"]
+        st.success(f"🎉 Correct · +{xp} XP · +1 ⭐") if ok else st.warning(f"Good try. Best answer: **{q['answer']}**")
+        st.write("**Why:** "+q["explanation"])
+        if st.button("Next"):
+            if m["i"]+1>=len(m["qs"]):m["done"]=True
+            else:m["i"]+=1;m["qstart"]=time.time();m["hint"]=False;m["fb"]=None
+            st.session_state.mission=m;st.rerun()
+if page=="Practice":mission("Practice")
+elif page=="Timed Test":mission("Timed Test")
+elif page=="Review Missed":mission("Review Missed")
+elif page=="Family Feed":
+    st.title("👥 Family Feed")
+    st.caption("Private family-only learning activity. No public social network in this starter.")
+    feed=db.family_feed(30)
+    if not feed: st.info("Complete a quiz to create the first family update.")
+    for item in feed:
+        icon="🎉" if item["correct"] else "🌱"
+        result="solved" if item["correct"] else "practiced"
+        st.write(f"{icon} {item['avatar']} **{item['name']}** {result} **{item['skill']}** in {item['subject']}.")
+elif page=="Rewards":
+    st.title("🎁 Rewards");st.write(f"Balance: **{p['stars']} ⭐**")
+    for r in db.rewards():
+        a,b=st.columns([3,1]);a.write(f"**{r['name']}** — {r['stars_cost']} ⭐")
+        if b.button("Redeem",key=str(r["id"]),disabled=p["stars"]<r["stars_cost"]):
+            if db.redeem(pid,r):st.success("Redeemed. Ask your parent to confirm.");st.rerun()
+elif page=="Badges":
+    st.title("🏅 Badges");have={x["badge"] for x in db.badges(pid)}
+    for b in ["🌱 First Steps","🧠 Curious Mind","🔥 Hot Streak","🏆 25 Questions","🦊 Explorer"]:st.write(("✅ " if b in have else "🔒 ")+b)
+elif page=="Parent Center":
+    st.title("🛡️ Parent Center")
+    if not st.session_state.parent:
+        pin=st.text_input("Family PIN",type="password")
+        if st.button("Unlock"):
+            if db.verify_pin(pin):st.session_state.parent=True;st.rerun()
+            else:st.error("Wrong PIN")
+        st.stop()
+    t1,t2,t3,t4=st.tabs(["Profiles","Controls","Rewards","Security"])
+    with t1:
+        for x in db.profiles():st.write(f"{x['avatar']} **{x['name']}** · Grade {x['grade']} · {x['xp']} XP")
+        name=st.text_input("New child name");grade=st.selectbox("Grade",[2,3,4,5,6,7],index=2);avatar=st.selectbox("Avatar",["🦊","🐸","🐼","🤖","🦄"])
+        if st.button("Add profile") and name.strip():db.add_profile(name.strip(),grade,avatar);st.rerun()
+    with t2:
+        lim=st.slider("Session limit",5,60,p["session_limit"],5);br=st.slider("Break reminder",5,45,min(45,p["break_reminder"]),5);night=st.toggle("Night mode",bool(p["night_mode"]))
+        if st.button("Save controls"):db.save_controls(pid,lim,br,night);st.success("Saved");st.rerun()
+    with t3:
+        rn=st.text_input("Reward name");cost=st.number_input("Star cost",10,1000,100,10)
+        if st.button("Add reward") and rn.strip():db.add_reward(rn.strip(),int(cost));st.rerun()
+        for r in db.rewards():st.write(f"• {r['name']} — {r['stars_cost']} ⭐")
+        st.divider(); st.subheader("Redemption requests")
+        for rr in db.redemptions():
+            a,b,c=st.columns([3,1,1]); a.write(f"**{rr['name']}** requested {rr['reward_name']} · {rr['stars_cost']} ⭐ · {rr['status']}")
+            if rr["status"]=="requested":
+                if b.button("Approve",key=f"ap{rr['id']}"): db.set_redemption_status(rr["id"],"approved"); st.rerun()
+                if c.button("Decline",key=f"de{rr['id']}"): db.set_redemption_status(rr["id"],"declined"); st.rerun()
+    with t4:
+        st.warning("Change demo PIN 2468.");np=st.text_input("New PIN",type="password")
+        if st.button("Change PIN"):
+            if len(np)>=4:db.change_pin(np);st.success("PIN changed")
+            else:st.error("Use at least 4 characters")
