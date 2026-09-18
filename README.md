@@ -45,3 +45,16 @@ SQLite is good for local use and a live instance but is not ideal as durable clo
 - weekly progress report
 - validated AI follow-up questions
 - hands-on STEAM build missions
+
+
+## Streamlit ImportError fix
+
+This build intentionally uses unique module names:
+
+- `steam_quiz_agent.py`
+- `steam_quiz_db.py`
+- `steam_question_bank.py`
+
+This avoids collisions with generic Python/module names such as `agent` or stale files in an existing GitHub repo.
+
+When updating an older repo, **delete the old `agent.py`, `db.py`, and `question_bank.py` files** before redeploying.

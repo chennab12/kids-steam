@@ -1,7 +1,7 @@
 import time,streamlit as st
-import db
-from agent import Agent,SUBJECTS,CORES
-from question_bank import skills_for
+import steam_quiz_db as db
+from steam_quiz_agent import Agent, SUBJECTS, CORES
+from steam_question_bank import skills_for
 st.set_page_config(page_title="STEAM Mesh",page_icon="🦊",layout="wide")
 db.init_db(); agent=Agent()
 for k,v in {"pid":None,"parent":False,"mission":None,"session_start":time.time()}.items():
